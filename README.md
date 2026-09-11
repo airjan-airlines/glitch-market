@@ -1,4 +1,4 @@
-# Black Box Bazaar
+# Glitch Market
 
 A marketplace where speedrunners sell glitches they have found — skips, clips, sequence breaks —
 to other runners **who cannot see what they are buying until they have paid for it**.

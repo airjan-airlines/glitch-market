@@ -50,7 +50,7 @@ export default function StatusLine({ route, go }) {
   return (
     <header className="statusline">
       <span className="brand">
-        BLACK BOX <b>BAZAAR</b>
+        GLITCH <b>MARKET</b>
       </span>
 
       <nav className="tabs">
