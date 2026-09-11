@@ -89,6 +89,31 @@ nav.tabs button {
 nav.tabs button:hover { color: var(--bone); background: var(--slab); }
 nav.tabs button[aria-current="true"] { color: var(--void); background: var(--signal); font-weight: 700; }
 
+/* ---------------------------------------------------------------- wallet popover */
+
+.wallet { position: relative; }
+.wallet-pop {
+  position: absolute;
+  top: calc(100% + 9px);
+  right: 0;
+  width: 290px;
+  background: var(--slab);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 13px 14px;
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.6);
+  font-family: var(--ui);
+  font-size: 12.5px;
+  line-height: 1.5;
+  z-index: 60;
+  text-align: left;
+}
+.wallet-pop b { display: block; font-size: 13px; margin-bottom: 5px; color: var(--bone); }
+.wallet-pop b.bad { color: var(--burn); }
+.wallet-pop p { margin: 0 0 9px; color: var(--ash-2); }
+.wallet-pop p.dim { color: var(--ash); font-size: 11.5px; }
+.wallet-pop a { font-family: var(--mono); font-size: 12px; }
+
 /* ---------------------------------------------------------------- layout */
 
 main { max-width: 1080px; margin: 0 auto; padding: 28px 20px 90px; }
