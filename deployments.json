@@ -1,8 +1,10 @@
 {
   "chainId": 84532,
   "chainName": "Base Sepolia",
-  "address": "0x70B7B754A53f90810d371b25Aa1d316497C3a94F",
-  "explorer": "https://sepolia.basescan.org/address/0x70B7B754A53f90810d371b25Aa1d316497C3a94F",
+  "address": "0x05db183415DdcFca9F973279d1d6Cab6C1A02590",
+  "explorer": "https://sepolia.basescan.org/address/0x05db183415DdcFca9F973279d1d6Cab6C1A02590",
   "rpcPublic": "https://sepolia.base.org",
-  "deployedAt": "2026-09-11T10:56:08Z"
+  "deployedAt": "2026-09-11T19:09:23Z",
+  "previousAddress": "0x70B7B754A53f90810d371b25Aa1d316497C3a94F",
+  "note": "Superseded 0x70B7B754A53f90810d371b25Aa1d316497C3a94F, which had no exit from a dispute that never reached a jury."
 }

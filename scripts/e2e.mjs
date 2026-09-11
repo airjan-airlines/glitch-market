@@ -109,8 +109,8 @@ async function main() {
   const cid = await pinToIPFS(ciphertext, `glitch-${Date.now()}.bin`, process.env.PINATA_JWT);
   log(`      pinned to IPFS: ${cid}`);
 
-  const initialPrice = parseEther("0.00001");
-  const minPrice = parseEther("0.000001");
+  const initialPrice = parseEther("0.000002");
+  const minPrice = parseEther("0.0000002");
   const stake = await read("requiredStake", [seller.address, initialPrice]);
   log(`      required stake ${eth(stake)} (seller reputation ${await read("reputation", [seller.address])})`);
 

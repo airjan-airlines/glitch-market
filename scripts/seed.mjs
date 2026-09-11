@@ -21,7 +21,7 @@ const LISTINGS = [
   {
     game: "Celeste", category: "Any%",
     teaser: "Chapter 5 dash-cancel that skips the mirror sequence. ~6s.",
-    price: "0.000005",
+    price: "0.000003",
     content: `CELESTE — ANY% — MIRROR TEMPLE DASH-CANCEL
 
 Entering the mirror corridor, hold down+dash into the second pane on the frame
@@ -34,7 +34,7 @@ Saves ~6.1 seconds. Works on 1.4.0.0 and later.`,
   {
     game: "Hollow Knight", category: "Any%",
     teaser: "Early Crystal Heart without Mantis Claw. Sub-1s setup, saves a full route leg.",
-    price: "0.000008",
+    price: "0.000004",
     content: `HOLLOW KNIGHT — ANY% — EARLY CRYSTAL HEART
 
 Stand on the leftmost pixel of the ledge below the Crystal Peak bench. Pogo the
@@ -47,7 +47,7 @@ Saves roughly 90 seconds of routing.`,
   {
     game: "Super Metroid", category: "100%",
     teaser: "Gate clip in Norfair that reorders the Grapple pickup. ~11s.",
-    price: "0.000006",
+    price: "0.0000035",
     content: `SUPER METROID — 100% — NORFAIR GATE CLIP
 
 At the green gate before the Grapple room, morph and lay a bomb flush with the

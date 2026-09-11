@@ -5,7 +5,9 @@
 export const BPS = 10_000n;
 export const DECAY_STEP = 30n; // seconds per table entry
 export const CHALLENGE_WINDOW = 180n; // 3 minutes
-export const JURY_THRESHOLD_BPS = 6_000n;
+export const JURY_THRESHOLD_BPS = 6_000n;      // tier 1: prior buyers of this listing
+export const OPEN_JURY_THRESHOLD_BPS = 1_000n; // tier 2: anyone
+export const TIMEOUT_THRESHOLD_BPS = 200n;     // tier 3: default to seller
 export const MIN_JURY_VOTES = 2;
 export const ALPHA_BPS = 5_000n;
 export const DISPUTE_BOND_BPS = 5_000n;
@@ -47,12 +49,29 @@ export function priceToSend(listing, now) {
   return conservative > live ? conservative : live;
 }
 
-/// Timestamp at which disputes on a listing become judgeable. Mirrors `juryEligibleAt`.
-export function juryEligibleAt(createdAt) {
+function thresholdAt(createdAt, bps) {
   for (let i = 0; i < DECAY_TABLE.length; i++) {
-    if (BigInt(DECAY_TABLE[i]) <= JURY_THRESHOLD_BPS) return createdAt + BigInt(i) * DECAY_STEP;
+    if (BigInt(DECAY_TABLE[i]) <= bps) return createdAt + BigInt(i) * DECAY_STEP;
   }
   return createdAt + BigInt(DECAY_TABLE.length) * DECAY_STEP;
+}
+
+/// When prior buyers of this listing may start judging. Mirrors `juryEligibleAt`.
+export const juryEligibleAt = (createdAt) => thresholdAt(createdAt, JURY_THRESHOLD_BPS);
+
+/// When the juror pool opens to everyone. Mirrors `openJuryAt`.
+export const openJuryAt = (createdAt) => thresholdAt(createdAt, OPEN_JURY_THRESHOLD_BPS);
+
+/// When an unjudged dispute can be defaulted to the seller. Mirrors `timeoutAt`.
+export const timeoutAt = (createdAt) => thresholdAt(createdAt, TIMEOUT_THRESHOLD_BPS);
+
+/// Who may judge right now: 0 nobody, 1 prior buyers, 2 anyone. Mirrors `juryTier`.
+export function juryTier(createdAt, now) {
+  const elapsed = now > createdAt ? now - createdAt : 0n;
+  const d = decayFactor(elapsed / DECAY_STEP);
+  if (d <= OPEN_JURY_THRESHOLD_BPS) return 2;
+  if (d <= JURY_THRESHOLD_BPS) return 1;
+  return 0;
 }
 
 export function disputeBondFor(pricePaid) {

@@ -116,3 +116,40 @@ number.
 A UI smoke test (`node scripts/smoke.mjs`) renders the deployed page in headless Chrome and asserts
 the market loads, all views mount, and the price actually ticks down — it caught a live decay of
 0.000004269 to 0.0000036006 over 32 seconds.
+
+---
+
+## Redeploy: staged jury pool and a timeout default
+
+`0x05db183415DdcFca9F973279d1d6Cab6C1A02590` supersedes
+`0x70B7B754A53f90810d371b25Aa1d316497C3a94F`. Both are verified on Basescan; the old one is left
+deployed and referenced in `deployments.json` so the history is inspectable.
+
+**What was wrong.** The first contract restricted jurors to prior buyers of the same listing, with no
+alternative path and no timeout. A listing bought by exactly one person, who then disputes, has an
+empty eligible juror pool — the disputer cannot rule on their own claim — so the escrow could never
+resolve. Payment, bond and the seller's stake would freeze permanently, and `withdrawStake` also
+refuses while any purchase is disputed, so the seller's capital was trapped too. This was found by
+the user hitting it directly: they disputed a listing they were the only buyer of.
+
+**Two further problems the same restriction caused.** The README claimed judgment waits until
+"secrecy value is mostly gone", but the threshold was 60% of initial price — losing 40% is not
+mostly gone, and the argument did not match the parameter. Separately, prior buyers are not
+disinterested jurors: a lost dispute delists the listing, which stops further copies being sold and
+preserves the edge of everyone who already bought, biasing them toward slashing the seller.
+
+**The fix.** The pool now widens in stages against the decay curve: prior buyers at 60%, anyone at
+10%, and a seller-default timeout at 2%. The timeout returns the buyer's bond and moves no
+reputation, because a timeout is an absence of judgment rather than a finding. Anyone may trigger
+it, so neither party can hold the escrow hostage by refusing to act. Thresholds are now calibrated
+to who is being shown the content rather than picked once.
+
+Nine tests were added for this (43 total), including the exact deadlock case:
+`test_SoleBuyerDisputeCanStillBeJudgedOnceJuryOpens`.
+
+**Demo timings:** stage 1 at 3.5 min after listing, stage 2 at 14 min, stage 3 at 23 min.
+
+**Cost note.** Demo prices were reduced when redeploying — seeded listings now open at
+0.000003–0.000004 ETH instead of 0.000005–0.000008, and the E2E listing at 0.000002 — because stake
+is 5x price and the deployer account was running low. Nothing about the mechanism changed, only the
+denominations.

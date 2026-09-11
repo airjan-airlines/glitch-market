@@ -362,6 +362,129 @@ contract GlitchMarketTest is Test {
     }
 
     // -----------------------------------------------------------------
+    // Staged jury: tiers, the single-buyer case, and the timeout default
+    // -----------------------------------------------------------------
+
+    /// A listing bought by exactly one person, who then disputes. Under a prior-buyers-only rule
+    /// this could never be judged, because the disputer may not rule on their own claim.
+    function _soloDisputedSetup() internal returns (uint256 id, uint256 pid) {
+        id = _list();
+        pid = _buy(alice, id);
+        uint256 bond = m.disputeBondFor(m.getPurchase(pid).pricePaid);
+        vm.prank(alice);
+        m.dispute{ value: bond }(pid, keccak256("evidence"));
+    }
+
+    function test_JuryTiersOpenInOrder() public {
+        (uint256 id, uint256 pid) = _disputedSetup();
+        assertEq(m.juryTier(pid), 0, "nobody may judge immediately");
+
+        vm.warp(m.juryEligibleAt(id));
+        assertEq(m.juryTier(pid), 1, "prior buyers first");
+
+        vm.warp(m.openJuryAt(id));
+        assertEq(m.juryTier(pid), 2, "then everyone");
+    }
+
+    function test_OutsiderCannotVoteAtTierOne() public {
+        (uint256 id, uint256 pid) = _disputedSetup();
+        vm.warp(m.juryEligibleAt(id));
+        assertFalse(m.canVote(pid, dave));
+        vm.prank(dave);
+        vm.expectRevert(GlitchMarket.NotAJuror.selector);
+        m.vote(pid, true);
+    }
+
+    function test_OutsiderCanVoteOnceJuryOpens() public {
+        (uint256 id, uint256 pid) = _disputedSetup();
+        vm.warp(m.openJuryAt(id));
+        assertTrue(m.canVote(pid, dave), "a stranger may judge worthless content");
+        vm.prank(dave);
+        m.vote(pid, true);
+        assertEq(m.getPurchase(pid).votesForBuyer, 1);
+    }
+
+    function test_DisputerAndSellerStillExcludedAtOpenTier() public {
+        (uint256 id, uint256 pid) = _disputedSetup();
+        vm.warp(m.openJuryAt(id));
+        assertFalse(m.canVote(pid, alice), "disputer never judges their own claim");
+        assertFalse(m.canVote(pid, seller), "seller never judges their own sale");
+        vm.prank(alice);
+        vm.expectRevert(GlitchMarket.NotAJuror.selector);
+        m.vote(pid, true);
+    }
+
+    /// The bug this tier structure exists to kill: a sole buyer's dispute must still resolve.
+    function test_SoleBuyerDisputeCanStillBeJudgedOnceJuryOpens() public {
+        (uint256 id, uint256 pid) = _soloDisputedSetup();
+        vm.warp(m.juryEligibleAt(id));
+        assertFalse(m.canVote(pid, dave), "still closed to outsiders at tier 1");
+
+        vm.warp(m.openJuryAt(id));
+        uint256 balBefore = alice.balance;
+        vm.prank(dave);
+        m.vote(pid, true);
+        vm.prank(bob);
+        m.vote(pid, true);
+
+        assertEq(uint256(m.getPurchase(pid).state), uint256(GlitchMarket.PurchaseState.RefundedToBuyer));
+        assertGt(alice.balance, balBefore, "the sole buyer is made whole");
+    }
+
+    function test_TimeoutNotAvailableEarly() public {
+        (, uint256 pid) = _soloDisputedSetup();
+        assertFalse(m.timeoutReady(pid));
+        vm.expectRevert(GlitchMarket.NotYetJudgeable.selector);
+        m.forceResolve(pid);
+    }
+
+    function test_TimeoutPaysSellerAndReturnsBond() public {
+        (uint256 id, uint256 pid) = _soloDisputedSetup();
+        uint256 paid = m.getPurchase(pid).pricePaid;
+        uint256 bond = m.getPurchase(pid).disputeBond;
+
+        vm.warp(m.timeoutAt(id));
+        assertTrue(m.timeoutReady(pid));
+
+        uint256 sellerBefore = seller.balance;
+        uint256 aliceBefore = alice.balance;
+        // Anyone may trigger it, so neither side can hold the escrow hostage.
+        vm.prank(dave);
+        m.forceResolve(pid);
+
+        assertEq(uint256(m.getPurchase(pid).state), uint256(GlitchMarket.PurchaseState.AwardedToSeller));
+        assertEq(seller.balance, sellerBefore + paid, "seller paid by default");
+        assertEq(alice.balance, aliceBefore + bond, "bond returned: nothing was proven either way");
+        assertEq(m.reputation(seller), 0, "a timeout moves no reputation");
+        assertEq(m.reputation(alice), 0);
+    }
+
+    function test_TimeoutCannotOverrideAVerdict() public {
+        (uint256 id, uint256 pid) = _disputedSetup();
+        vm.warp(m.juryEligibleAt(id));
+        vm.prank(bob);
+        m.vote(pid, true);
+        vm.prank(carol);
+        m.vote(pid, true);
+
+        vm.warp(m.timeoutAt(id));
+        vm.expectRevert(GlitchMarket.WrongState.selector);
+        m.forceResolve(pid);
+    }
+
+    function test_SellerStakeUnfreezesAfterTimeout() public {
+        (uint256 id, uint256 pid) = _soloDisputedSetup();
+        vm.warp(m.timeoutAt(id));
+        m.forceResolve(pid);
+        vm.prank(seller);
+        m.closeListing(id);
+        uint256 before = seller.balance;
+        vm.prank(seller);
+        m.withdrawStake(id);
+        assertGt(seller.balance, before, "capital is no longer trapped");
+    }
+
+    // -----------------------------------------------------------------
     // Stake lifecycle
     // -----------------------------------------------------------------
 

@@ -10,8 +10,10 @@ pragma solidity 0.8.24;
 ///         and spreads. Payment sits in escrow behind a short challenge window; if nobody disputes,
 ///         the seller claims it. A dispute freezes the escrow rather than refunding it, and is
 ///         judged only once the listing's price has decayed far enough that showing the content to
-///         a jury costs the ecosystem little. Jurors are drawn exclusively from prior buyers of the
-///         same listing, so judging a dispute never widens the set of people who have seen the trick.
+///         a jury costs the ecosystem little. The juror pool widens as that value drains: first
+///         prior buyers of the same listing, who already know the secret and can actually test the
+///         trick; then, once the content is all but worthless, anyone at all. If no jury ever
+///         converges, the escrow defaults to the seller rather than freezing forever.
 ///
 /// @dev    Timing constants are set for a live video demo, not for production. See NOTES.md.
 contract GlitchMarket {
@@ -30,10 +32,23 @@ contract GlitchMarket {
     /// @notice How long a buyer has to dispute before the seller may claim escrow.
     uint256 public constant CHALLENGE_WINDOW = 3 minutes;
 
-    /// @notice A dispute becomes judgeable once price has decayed to this fraction of initial.
+    /// @notice Tier 1. Prior buyers of this listing may judge once decay passes here.
     uint256 public constant JURY_THRESHOLD_BPS = 6_000;
 
-    /// @notice Independent prior buyers that must converge before a dispute resolves.
+    /// @notice Tier 2. Anyone may judge once decay passes here.
+    ///
+    /// @dev Restricting jurors to prior buyers protects the secret, but it has two costs. It can
+    ///      leave a listing with a single buyer permanently unjudgeable — the disputer may not rule
+    ///      on their own claim, so the escrow would freeze forever. And prior buyers are not
+    ///      disinterested: a lost dispute delists the listing, which preserves the edge of everyone
+    ///      who already bought, biasing them toward slashing the seller. Opening the pool once the
+    ///      content is all but worthless fixes both, and by then disclosure costs near nothing.
+    uint256 public constant OPEN_JURY_THRESHOLD_BPS = 1_000;
+
+    /// @notice Tier 3. With the value gone and still no verdict, anyone may trigger the default.
+    uint256 public constant TIMEOUT_THRESHOLD_BPS = 200;
+
+    /// @notice Independent jurors that must converge before a dispute resolves.
     uint256 public constant MIN_JURY_VOTES = 2;
 
     /// @notice `alpha` from the PRD: each copy sold adds 0.5 to the denominator of the price.
@@ -136,6 +151,7 @@ contract GlitchMarket {
     event Disputed(uint256 indexed purchaseId, address indexed buyer, uint256 bond, bytes32 evidenceHash);
     event Voted(uint256 indexed purchaseId, address indexed juror, bool forBuyer);
     event Resolved(uint256 indexed purchaseId, bool buyerWon, uint256 payout, uint256 slashedStake);
+    event TimedOut(uint256 indexed purchaseId, uint256 paidToSeller, uint256 bondReturned);
     event ListingClosed(uint256 indexed listingId);
     event StakeWithdrawn(uint256 indexed listingId, address indexed seller, uint256 amount);
 
@@ -357,25 +373,71 @@ contract GlitchMarket {
         emit Disputed(purchaseId, msg.sender, bond, evidenceHash);
     }
 
-    /// @notice True once the listing's secrecy has aged out enough to be worth showing a jury.
-    /// @dev    Deliberately keyed to the *time* decay only, not to `currentPrice`. Copies sold also
-    ///         erode secrecy, but folding them in would let a seller pull a dispute forward into
-    ///         judgment by manufacturing self-dealt purchases. Elapsed time is the one input to this
-    ///         gate that no participant can accelerate.
-    function juryEligible(uint256 purchaseId) public view returns (bool) {
-        Purchase storage p = _purchases[purchaseId];
-        if (p.state != PurchaseState.Disputed) return false;
-        Listing storage l = _listings[p.listingId];
-        return decayFactor((block.timestamp - l.createdAt) / DECAY_STEP) <= JURY_THRESHOLD_BPS;
+    /// @notice The listing's current time-decay factor, in basis points.
+    /// @dev    Keyed to *time* only, not to `currentPrice`. Copies sold also erode secrecy, but
+    ///         folding them in would let a seller pull a dispute forward into judgment by
+    ///         manufacturing self-dealt purchases. Elapsed time is the one input to these gates
+    ///         that no participant can accelerate.
+    function listingDecay(uint256 listingId) public view returns (uint256) {
+        Listing storage l = _listings[listingId];
+        return decayFactor((block.timestamp - l.createdAt) / DECAY_STEP);
     }
 
-    /// @notice Timestamp at which disputes on this listing become judgeable, for UI countdowns.
-    function juryEligibleAt(uint256 listingId) public view returns (uint256) {
+    /// @notice Who may judge this dispute right now.
+    ///         0 = nobody yet, 1 = prior buyers of this listing, 2 = anyone.
+    function juryTier(uint256 purchaseId) public view returns (uint8) {
+        Purchase storage p = _purchases[purchaseId];
+        if (p.state != PurchaseState.Disputed) return 0;
+        uint256 d = listingDecay(p.listingId);
+        if (d <= OPEN_JURY_THRESHOLD_BPS) return 2;
+        if (d <= JURY_THRESHOLD_BPS) return 1;
+        return 0;
+    }
+
+    /// @notice True once anyone at all may vote on this dispute.
+    function juryEligible(uint256 purchaseId) public view returns (bool) {
+        return juryTier(purchaseId) > 0;
+    }
+
+    /// @notice True once the default resolution may be triggered because no jury ever converged.
+    function timeoutReady(uint256 purchaseId) public view returns (bool) {
+        Purchase storage p = _purchases[purchaseId];
+        if (p.state != PurchaseState.Disputed) return false;
+        return listingDecay(p.listingId) <= TIMEOUT_THRESHOLD_BPS;
+    }
+
+    /// @notice Whether `juror` may vote on this dispute right now, for the UI.
+    function canVote(uint256 purchaseId, address juror) public view returns (bool) {
+        uint8 tier = juryTier(purchaseId);
+        if (tier == 0) return false;
+        Purchase storage p = _purchases[purchaseId];
+        if (juror == p.buyer || juror == _listings[p.listingId].seller) return false;
+        if (hasVoted[purchaseId][juror]) return false;
+        if (tier == 1 && !hasPurchased[p.listingId][juror]) return false;
+        return true;
+    }
+
+    function _thresholdAt(uint256 listingId, uint256 bps) private view returns (uint256) {
         Listing storage l = _listings[listingId];
         for (uint256 i = 0; i < DECAY_TABLE_LEN; i++) {
-            if (decayFactor(i) <= JURY_THRESHOLD_BPS) return l.createdAt + (i * DECAY_STEP);
+            if (decayFactor(i) <= bps) return l.createdAt + (i * DECAY_STEP);
         }
         return l.createdAt + (DECAY_TABLE_LEN * DECAY_STEP);
+    }
+
+    /// @notice Timestamp at which prior buyers may start judging, for UI countdowns.
+    function juryEligibleAt(uint256 listingId) public view returns (uint256) {
+        return _thresholdAt(listingId, JURY_THRESHOLD_BPS);
+    }
+
+    /// @notice Timestamp at which the jury opens to everyone.
+    function openJuryAt(uint256 listingId) public view returns (uint256) {
+        return _thresholdAt(listingId, OPEN_JURY_THRESHOLD_BPS);
+    }
+
+    /// @notice Timestamp at which an unjudged dispute can be defaulted to the seller.
+    function timeoutAt(uint256 listingId) public view returns (uint256) {
+        return _thresholdAt(listingId, TIMEOUT_THRESHOLD_BPS);
     }
 
     /// @notice Vote on a frozen dispute. Only prior buyers of this same listing may vote, and the
@@ -385,8 +447,10 @@ contract GlitchMarket {
         Listing storage l = _listings[p.listingId];
 
         if (p.state != PurchaseState.Disputed) revert WrongState();
-        if (!juryEligible(purchaseId)) revert NotYetJudgeable();
-        if (!hasPurchased[p.listingId][msg.sender]) revert NotAJuror();
+        uint8 tier = juryTier(purchaseId);
+        if (tier == 0) revert NotYetJudgeable();
+        // Tier 1 is prior buyers only; tier 2 is open to anyone. Neither side of the dispute votes.
+        if (tier == 1 && !hasPurchased[p.listingId][msg.sender]) revert NotAJuror();
         if (msg.sender == p.buyer || msg.sender == l.seller) revert NotAJuror();
         if (hasVoted[purchaseId][msg.sender]) revert AlreadyVoted();
 
@@ -398,6 +462,29 @@ contract GlitchMarket {
 
         if (p.votesForBuyer >= MIN_JURY_VOTES) _resolve(purchaseId, true);
         else if (p.votesForSeller >= MIN_JURY_VOTES) _resolve(purchaseId, false);
+    }
+
+    /// @notice Default resolution when no jury ever converged and the content is worthless.
+    ///
+    /// @dev    The optimistic model applied consistently: absent affirmative evidence against the
+    ///         seller, the seller is paid. The buyer's bond is returned rather than forfeited,
+    ///         because nothing was proven against them either — they simply never got a verdict.
+    ///         Callable by anyone, so neither party can hold the escrow hostage by refusing to act.
+    function forceResolve(uint256 purchaseId) external nonReentrant {
+        Purchase storage p = _purchases[purchaseId];
+        Listing storage l = _listings[p.listingId];
+        if (p.state != PurchaseState.Disputed) revert WrongState();
+        if (!timeoutReady(purchaseId)) revert NotYetJudgeable();
+
+        p.state = PurchaseState.AwardedToSeller;
+        uint256 bond = p.disputeBond;
+        uint256 payout = p.pricePaid;
+        p.disputeBond = 0;
+        // No reputation moves: a timeout is an absence of judgment, not a finding either way.
+        if (bond > 0) _send(p.buyer, bond);
+        _send(l.seller, payout);
+        emit TimedOut(purchaseId, payout, bond);
+        emit Resolved(purchaseId, false, payout, 0);
     }
 
     function _resolve(uint256 purchaseId, bool buyerWon) private {

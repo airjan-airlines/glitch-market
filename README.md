@@ -6,9 +6,9 @@ to other runners **who cannot see what they are buying until they have paid for 
 | | |
 |---|---|
 | **Live app** | https://airjan-airlines.github.io/glitch-market/ |
-| **Contract** | [`0x70B7B754A53f90810d371b25Aa1d316497C3a94F`](https://sepolia.basescan.org/address/0x70B7B754A53f90810d371b25Aa1d316497C3a94F) (verified) |
+| **Contract** | [`0x05db183415DdcFca9F973279d1d6Cab6C1A02590`](https://sepolia.basescan.org/address/0x05db183415DdcFca9F973279d1d6Cab6C1A02590) (verified) |
 | **Chain** | Base Sepolia (84532) |
-| **Explorer** | https://sepolia.basescan.org/address/0x70B7B754A53f90810d371b25Aa1d316497C3a94F |
+| **Explorer** | https://sepolia.basescan.org/address/0x05db183415DdcFca9F973279d1d6Cab6C1A02590 |
 
 ---
 
@@ -58,7 +58,8 @@ work posts a bond and the escrow freezes. It is deliberately *not* an instant re
 were free and immediate, any buyer could take the content, dispute, get their money back, and leave
 honest sellers permanently griefable. The bond is forfeited if the jury disagrees with them.
 
-**Juries are prior buyers of the same listing, only.** More on this below.
+**Juries start as prior buyers of the same listing, then widen as the content loses value.** More
+on this below.
 
 **Reputation** rises on clean sales and falls sharply on a lost dispute, and it sets the stake a
 seller has to post next time.
@@ -73,9 +74,14 @@ The obvious design is to resolve disputes quickly. This does the opposite on pur
 
 Judging "does this glitch work?" requires showing the glitch to whoever is judging. Do that while
 the secret is still valuable and the resolution process becomes a leak — you have handed the trick
-to a jury for free, and a dishonest buyer could dispute purely to force that disclosure. Wait until
-the decay curve has eaten most of the value, and showing it to a few people costs the ecosystem
-almost nothing, because it is nearly public anyway.
+to a jury for free, and a dishonest buyer could dispute purely to force that disclosure. Let the
+decay curve run first and disclosure gets cheaper every minute, until showing it to a few people
+costs the ecosystem almost nothing.
+
+How cheap it has to get depends on who is being shown. The first gate opens at 60% of the initial
+price, which is not "nearly worthless" — it is only cheap enough to show people who already bought
+the content and therefore learn nothing new. Widening the pool to strangers waits for 10%, where
+the leak is genuinely marginal. The thresholds are calibrated to the audience, not picked once.
 
 So the mechanism trades speed for containment. Money stays frozen — not refunded, not claimable —
 until the thing being argued about is no longer worth much. Time is doing the work that an escrow
@@ -86,12 +92,38 @@ copies-sold term that also feeds the price. Otherwise a seller could pull a disp
 judgment by manufacturing self-dealt purchases. Elapsed time is the one input no participant can
 accelerate.
 
-**The jury is restricted to prior buyers of that same listing.** This follows from the same logic.
-Recruiting neutral outside arbiters would mean showing the secret to people who never paid for it —
-expanding the leak, and handing a stranger a working glitch in exchange for jury duty. Everyone in
-the juror pool has already legitimately seen the content, so judging a dispute never widens the
-circle. Two independent prior buyers must converge before any money moves; the disputing buyer
-cannot vote on their own claim, and neither can the seller.
+**The juror pool widens as the value drains.** Recruiting neutral outside arbiters early would mean
+showing the secret to people who never paid for it — expanding the leak, and handing a stranger a
+working glitch in exchange for jury duty. So judgment opens in stages, each tied to the decay curve:
+
+| Stage | Opens when | Who may judge |
+|---|---|---|
+| 1 | price decays to 60% of initial | prior buyers of that listing only |
+| 2 | price decays to 10% | anyone |
+| 3 | price decays to 2% | nobody judged it — escrow defaults to the seller |
+
+Stage 1 is the containment argument: everyone eligible has already legitimately seen the content, so
+ruling on a dispute never widens the circle, and they are runners of that game who can actually go
+attempt the trick. Stage 2 exists because by then the containment argument has expired — the content
+is nearly worthless, so disclosure costs almost nothing, and keeping the pool closed would buy no
+protection while causing two real problems.
+
+The first is a deadlock. A listing with exactly one buyer, who disputes, has an empty eligible juror
+pool: the disputer may not rule on their own claim. Under a prior-buyers-only rule that escrow —
+payment, bond, and the seller's stake — freezes permanently with no path out.
+
+The second is bias. A lost dispute delists the listing, which stops further copies being sold, which
+preserves the competitive edge of everyone who already bought it. Prior buyers are therefore not
+disinterested: they are structurally inclined to slash the seller regardless of whether the glitch
+works. Opening the pool dilutes that with jurors who have no position in the listing.
+
+Stage 3 is the backstop. If nobody ever rules, the optimistic default applies — absent affirmative
+evidence against the seller, the seller is paid. The buyer's bond is returned rather than forfeited,
+since nothing was proven against them either, and no reputation moves in either direction. Anyone
+may trigger it, so neither party can hold the escrow hostage by refusing to act.
+
+Throughout, two independent jurors must converge before any money moves, and neither the disputing
+buyer nor the seller may ever vote.
 
 ---
 
@@ -153,9 +185,10 @@ of glitch validity** (research-grade difficulty).
 
 ## Demo timings are compressed
 
-The challenge window is **3 minutes** and the decay curve steps every **30 seconds**, so a dispute
-becomes judgeable about 3.5 minutes after listing. A real market would run these over hours or days.
-They are short so the entire lifecycle fits in a video.
+The challenge window is **3 minutes** and the decay curve steps every **30 seconds**, so the jury
+stages open at roughly **3.5 minutes** (prior buyers), **14 minutes** (anyone) and **23 minutes**
+(default to seller) after listing. A real market would run these over days. They are short so the
+whole lifecycle fits in a video.
 
 This matters more than it might seem: you cannot fast-forward `block.timestamp` on a public testnet
 the way you can locally, so the live demo depends on constants that are genuinely short in real

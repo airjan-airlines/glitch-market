@@ -259,6 +259,25 @@ textarea { resize: vertical; min-height: 66px; font-family: var(--ui); }
 
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
+/* ---------------------------------------------------------------- jury tiers */
+
+.tiers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
+.tier {
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 9px 11px;
+  background: var(--void);
+  opacity: 0.55;
+}
+.tier b { display: block; font-family: var(--mono); font-size: 11px; color: var(--ash-2); font-weight: 500; margin-bottom: 3px; }
+.tier span { font-family: var(--mono); font-size: 12.5px; color: var(--ash); }
+.tier.on { opacity: 1; border-color: rgba(0, 255, 156, 0.35); }
+.tier.on b { color: var(--signal); }
+.tier.on span { color: var(--bone); }
+.tier.on.warn { border-color: rgba(255, 176, 32, 0.4); }
+.tier.on.warn b { color: var(--ember); }
+@media (max-width: 760px) { .tiers { grid-template-columns: 1fr; } }
+
 /* ---------------------------------------------------------------- feedback */
 
 .note { padding: 11px 13px; border-radius: 5px; font-size: 13px; margin-bottom: 14px; font-family: var(--mono); }
