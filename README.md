@@ -12,6 +12,14 @@ to other runners **who cannot see what they are buying until they have paid for 
 
 ---
 
+**The four things the brief asks for:**
+[chosen vertical](#the-vertical-and-why-pay-before-inspect-is-the-honest-design-here) ·
+[trust assumptions](#trust-assumptions) ·
+[biggest design decision](#the-biggest-design-decision-patience-as-the-trust-primitive) ·
+[one important limitation](#one-important-limitation-the-jury-is-not-sybil-resistant)
+
+---
+
 ## The vertical, and why pay-before-inspect is the honest design here
 
 Sellers are players who found a glitch in practice. Buyers are competitive runners chasing a
@@ -234,18 +242,6 @@ the way you can locally, so the live demo depends on constants that are genuinel
 time rather than on any time-travel trick.
 
 ---
-
-## Before recording the demo
-
-Decay is compressed for video, which means a listing reaches its floor price in roughly twenty
-minutes. **Seed fresh listings immediately before filming** or the market will look flat:
-
-```bash
-node scripts/seed.mjs      # three fresh listings, ~0.0001 ETH of stake total
-```
-
-Then record within about ten minutes, while prices are still visibly falling. `scripts/reclaim.mjs`
-closes finished listings and returns the seller's stake afterwards.
 
 ## Running it
 
