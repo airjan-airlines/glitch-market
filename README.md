@@ -163,6 +163,18 @@ time rather than on any time-travel trick.
 
 ---
 
+## Before recording the demo
+
+Decay is compressed for video, which means a listing reaches its floor price in roughly twenty
+minutes. **Seed fresh listings immediately before filming** or the market will look flat:
+
+```bash
+node scripts/seed.mjs      # three fresh listings, ~0.0001 ETH of stake total
+```
+
+Then record within about ten minutes, while prices are still visibly falling. `scripts/reclaim.mjs`
+closes finished listings and returns the seller's stake afterwards.
+
 ## Running it
 
 ```bash
