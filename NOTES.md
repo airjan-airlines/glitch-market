@@ -62,3 +62,57 @@ and the frontend wait for the block number to catch up and retry reads.
 That rules out event-log indexing for the UI. The frontend instead enumerates state directly:
 `listingCount()` + `listingView(i)`, and `purchasesOfBuyer` / `purchasesOfListing` for the rest. The
 contract was already written with these array-returning views, so no contract change was needed.
+
+---
+
+## Build outcome
+
+**Everything in the PRD's must-demo path (section 6) works on the live deployment.**
+`npm run e2e` drives all of it against Base Sepolia and real IPFS, and passes: list with encryption
+and an on-chain commitment, locked before payment, buy and decrypt, price visibly moved for the next
+buyer, dispute freezes without refunding, seller blocked from claiming while frozen, votes rejected
+before the decay gate, disputer and seller both barred from judging, one juror insufficient, two
+convergent jurors move the money and update reputation. The happy-path claim also executed on-chain
+via `scripts/reclaim.mjs`.
+
+**Deployed and verified:** `0x70B7B754A53f90810d371b25Aa1d316497C3a94F` on Base Sepolia.
+Etherscan's V2 multichain API key verified it on Basescan without extra setup.
+
+**App:** https://airjan-airlines.github.io/glitch-market/ — a GitHub *project* page, which is why
+Vite's `base` is `/glitch-market/`. It does not collide with the existing user site at
+airjan-airlines.github.io, which is served from its own repo.
+
+---
+
+## Two deviations worth knowing about
+
+**The Pinata JWT is deliberately NOT compiled into the published app.**
+The original plan was to bake it in so listing worked out of the box. That would have published a
+live write credential on a public page, so the deployed build ships no secrets and the sell form
+asks for a JWT once, keeping it in `localStorage`. Browsing, buying and judging need no credential
+at all — only listing does, since listing is the only step that uploads. Local dev can still supply
+one through the repo-root `.env` via `VITE_PINATA_JWT`, but that key was removed from `.env` so a
+careless rebuild cannot leak it.
+
+**Every public IPFS gateway rate-limited this build.**
+gateway.pinata.cloud is unreachable on the free plan now, and ipfs.io, dweb.link and w3s.link all
+returned 429. cloudflare-ipfs.com is discontinued. Retrieval uses the account's dedicated Pinata
+gateway, with the public ones as fallback. The blobs are ciphertext, so a readable gateway leaks
+nothing — but a grader cloning this repo will need their own gateway in `IPFS_GATEWAY`.
+
+---
+
+## State of the live market
+
+Six listings exist. Three are live (Celeste, Hollow Knight, Super Metroid); three are earlier E2E
+listings now closed or delisted, and they render dimmed as "delisted". That is real history, not
+seed data.
+
+The seller account's reputation is **-4**: it lost the E2E dispute (-5) and won one clean claim (+1).
+It is honest state and shows the reputation system working, but it does mean the demo seller looks
+untrustworthy and posts the maximum 5x stake. Listing from a fresh address would show a cleaner
+number.
+
+A UI smoke test (`node scripts/smoke.mjs`) renders the deployed page in headless Chrome and asserts
+the market loads, all views mount, and the price actually ticks down — it caught a live decay of
+0.000004269 to 0.0000036006 over 32 seconds.

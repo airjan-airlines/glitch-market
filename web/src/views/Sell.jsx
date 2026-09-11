@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { parseEther, formatEther, keccak256 } from "viem";
 import { useAccount, useReadContract } from "wagmi";
-import { CONTRACT, PINATA_JWT } from "../config";
+import { CONTRACT, getPinataJwt, setPinataJwt, JWT_IS_BUILTIN } from "../config";
 import { encryptBlob, randomKey, toHex } from "@shared/crypto.js";
 import { pinToIPFS } from "@shared/storage.js";
 import TxButton from "../components/TxButton";
@@ -26,6 +26,7 @@ export default function Sell({ go }) {
     content: SAMPLE,
   });
   const [prep, setPrep] = useState({ status: "idle" });
+  const [jwt, setJwt] = useState(getPinataJwt());
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   let initialPrice = 0n, minPrice = 0n, priceOk = false;
@@ -51,7 +52,7 @@ export default function Sell({ go }) {
       const ciphertext = await encryptBlob(plaintext, key);
       const contentHash = keccak256(ciphertext);
       setPrep({ status: "working", stage: "uploading the encrypted file to IPFS" });
-      const cid = await pinToIPFS(ciphertext, `glitch-${Date.now()}.bin`, PINATA_JWT);
+      const cid = await pinToIPFS(ciphertext, `glitch-${Date.now()}.bin`, getPinataJwt());
       setPrep({ status: "ready", key: toHex(key), contentHash, cid, size: ciphertext.length });
     } catch (e) {
       setPrep({ status: "error", error: e.message });
@@ -114,8 +115,26 @@ export default function Sell({ go }) {
 
       <div className="panel">
         <h2>commit</h2>
+        {!JWT_IS_BUILTIN && (
+          <>
+            <label>
+              <span>pinata jwt — needed to pin the encrypted file to IPFS</span>
+              <input
+                type="password"
+                value={jwt}
+                placeholder="paste a Pinata JWT"
+                onChange={(e) => { setJwt(e.target.value); setPinataJwt(e.target.value); }}
+              />
+            </label>
+            <p className="hint">
+              Kept in this browser only, never compiled into the page and never sent anywhere but
+              Pinata. Buying and judging need none of this — only listing does, because listing is
+              the step that uploads a file. Free key at pinata.cloud.
+            </p>
+          </>
+        )}
         {prep.status === "idle" && (
-          <button className="btn big" onClick={prepare} disabled={!priceOk || !form.content.trim()}>
+          <button className="btn big" onClick={prepare} disabled={!priceOk || !form.content.trim() || !jwt}>
             Encrypt and upload
           </button>
         )}
