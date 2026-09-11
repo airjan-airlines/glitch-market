@@ -155,22 +155,56 @@ escrow, commitments, decay, disputes, juries — depends on this shortcut.
 
 ---
 
-## One important limitation: the evidence is weak
+## One important limitation: the jury is not sybil-resistant
+
+Jurors are prior buyers of the listing. That protects the secret, but it quietly assumes buyers are
+distinct people, and nothing on-chain enforces that.
+
+A seller can defeat any dispute for the price of gas:
+
+1. List content that does not work.
+2. Wait for a real buyer to dispute — they have now posted a bond.
+3. Buy the listing from two addresses the seller also controls. `purchase()` only rejects the
+   literal seller address, and there is no requirement that a juror bought *before* the dispute was
+   raised, so this works reactively.
+4. Vote twice for the seller. Quorum is a flat two and resolution is first-past-the-post, so honest
+   jurors never get a say.
+5. The seller keeps the payment, takes the disputing buyer's forfeited bond, and gains reputation.
+
+The sock-puppet purchases cost almost nothing, because the seller reclaims that money through
+`claim()` once the challenge window closes. Net cost is gas — on the order of 0.000006 ETH. It pays
+for itself on the first victim.
+
+Opening the pool to everyone at stage 2 does not help: the attacker reaches quorum at stage 1, long
+before anyone else may vote. First-to-two rewards speed, not truth.
+
+**The fix is a staked juror pool with random selection**, which is how this class of problem is
+actually solved — Kleros and UMA both use token-weighted juries rather than one-address-one-vote.
+Concretely: anyone may join a juror pool by posting a bond; a dispute that has passed the decay gate
+and a minimum copies-sold threshold draws K jurors pseudorandomly from that pool; only drawn jurors
+vote; votes tally at the end of a window rather than first-to-two; jurors in the majority earn a cut
+of the loser's bond and jurors against it are slashed. The bond is what creates the sybil cost —
+random selection alone would not, since registering a thousand addresses would simply win a thousand
+draws. Randomness prevents targeting and collusion *within* an already-expensive set, which is the
+same reason Ethereum's validator sampling is secure because of the 32 ETH stake behind it, not
+because of the sampling.
+
+The decay gate would stay either way: random jurors are still strangers, so judgment should still
+wait until showing them the content costs little.
+
+This was found by attacking the deployed contract rather than in review, and the mechanism is
+deployed as described above — the weakness is real and present, not hypothetical.
+
+## A second limitation: the evidence is weak
 
 A disputing buyer uploads their attempt, which is pinned to IPFS, and the CID's own digest goes
-on-chain as `evidenceHash`. That one `bytes32` is both a commitment to the file and a pointer to it
-— a CIDv0 is `base58(0x12 0x20 || sha2-256)`, so the 32-byte digest is exactly what fits, and jurors
-reconstruct the CID to fetch and watch the bytes that were committed. The contract also emits a
-nonce at purchase time which the buyer must capture on screen. That stops one attack: old or
-unrelated footage cannot be recycled, because it will not carry the right nonce.
+on-chain as `evidenceHash`, so jurors can fetch and watch exactly what was committed. The contract
+also emits a nonce at purchase time which the buyer must capture on screen, which stops old or
+unrelated footage being recycled.
 
-**It does nothing about editing.** Hashing a video proves only that it was not swapped after
-submission — not that it is a genuine, unedited recording of a real attempt. A buyer who is willing
-to doctor footage can produce evidence this system cannot distinguish from the real thing. Jurors
-are prior buyers who can go attempt the trick themselves, which is the actual defence, but the
-recorded evidence on its own should be read as a weak signal.
-
-The real fix is input-log replay, below.
+It does nothing about editing. Hashing a video proves only that it was not swapped after
+submission — not that it is a genuine, unedited recording of a real attempt. Jurors going and trying
+the trick themselves is the actual defence; the recorded evidence alone is a weak signal.
 
 ### What full-fidelity verification would look like (understood, not built)
 
