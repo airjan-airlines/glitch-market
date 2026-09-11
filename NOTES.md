@@ -51,3 +51,14 @@ pay-before-reveal at the *application* layer, not cryptographically.
 If a listing loses one dispute, its stake is consumed. A second disputed purchase against that same
 listing has nothing left to slash. Mitigated in practice by deactivating the listing on a lost
 dispute, but a seller with many simultaneous in-flight purchases is under-collateralized.
+
+**RPC read-after-write lag is real on Base Sepolia.**
+A transaction receipt does not guarantee that the next `eth_call` sees the new state — a
+load-balanced endpoint can serve a node that has not applied the block yet. This showed up as
+`getListing(0)` reverting out-of-bounds immediately after a successful `list()`. Both the E2E script
+and the frontend wait for the block number to catch up and retry reads.
+
+**Alchemy's free tier caps `eth_getLogs` to a 10-block range.**
+That rules out event-log indexing for the UI. The frontend instead enumerates state directly:
+`listingCount()` + `listingView(i)`, and `purchasesOfBuyer` / `purchasesOfListing` for the rest. The
+contract was already written with these array-returning views, so no contract change was needed.

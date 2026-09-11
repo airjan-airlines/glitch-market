@@ -1,0 +1,12 @@
+{
+  "name": "glitch-market",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "e2e": "node scripts/e2e.mjs"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "viem": "^2.21.0"
+  }
+}
