@@ -1,0 +1,19 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+wallets.json
+
+# Foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/*/dry-run/
+
+# Node
+node_modules/
+dist/
+.vite/
+*.log
+
+# OS
+.DS_Store
