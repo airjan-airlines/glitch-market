@@ -1,3 +1,6 @@
+# Local-only working docs
+VIDEO_PLAN.md
+
 # Secrets — never commit
 .env
 .env.*

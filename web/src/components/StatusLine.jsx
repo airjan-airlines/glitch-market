@@ -76,7 +76,9 @@ export default function StatusLine({ route, go }) {
 
       {isConnected ? (
         <>
-          {bal && <span className="chip"><s>{Number(bal.formatted).toFixed(5)}</s> ETH</span>}
+          {Number.isFinite(Number(bal?.formatted)) && (
+            <span className="chip"><s>{Number(bal.formatted).toFixed(5)}</s> ETH</span>
+          )}
           <button className="btn ghost" style={{ padding: "5px 11px", fontSize: 12 }} onClick={() => disconnect()}>
             {short(address)}
           </button>
