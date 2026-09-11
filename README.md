@@ -188,13 +188,27 @@ npm run e2e                           # list -> buy -> decay -> dispute -> freez
 node scripts/e2e.mjs --happy          # list -> buy -> decay -> seller claims
 
 # frontend
-cd web && npm run dev
+cd web
+npm install                           # first time only
+npm run dev                           # http://localhost:5173/glitch-market/
+
+# render the deployed (or local) page headless and assert it works
+node scripts/smoke.mjs                            # live GitHub Pages build
+node scripts/smoke.mjs http://localhost:5173/glitch-market/
 ```
 
-`.env` needs `BASE_SEPOLIA_RPC_URL`, `ETHERSCAN_API_KEY`, `PINATA_JWT`, and the four demo keys.
-Listing from the deployed app asks for a Pinata JWT in the browser — it is stored locally and never
-compiled into the published page, so the public build ships no credentials. Browsing, buying and
-judging need nothing.
+The dev server serves under `/glitch-market/`, matching the GitHub Pages project path — plain
+`localhost:5173` redirects there. It reads the same deployed Base Sepolia contract as the live site,
+so local and hosted show identical listings; there is no local chain to start.
+
+To interact rather than just browse, point MetaMask at Base Sepolia and import one of the demo keys
+from `.env` (`BUYER_A_PRIVATE_KEY` is the one with the most balance). Listing additionally asks for
+a Pinata JWT in the browser — paste the `PINATA_JWT` value from `.env`. It is kept in `localStorage`
+and never compiled into the published page, so the public build ships no credentials. Browsing,
+buying and judging need no JWT at all.
+
+`.env` needs `BASE_SEPOLIA_RPC_URL`, `ETHERSCAN_API_KEY`, `PINATA_JWT`, `IPFS_GATEWAY`, and the four
+demo keys.
 
 ## Layout
 
