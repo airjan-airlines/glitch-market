@@ -153,3 +153,15 @@ Nine tests were added for this (43 total), including the exact deadlock case:
 0.000003–0.000004 ETH instead of 0.000005–0.000008, and the E2E listing at 0.000002 — because stake
 is 5x price and the deployer account was running low. Nothing about the mechanism changed, only the
 denominations.
+
+**The deadlock fix is verified on-chain, not just in unit tests.**
+`scripts/e2e-deadlock.mjs` reproduces the exact configuration that used to freeze forever — a sole
+buyer disputes their own purchase — and walks all three stages against the live contract in real
+time (~24 min). It asserts that at stage 1 the eligible juror pool is genuinely empty (the disputer
+is barred from her own claim, a stranger is not yet eligible), that stage 2 opens the pool and
+breaks the deadlock while still barring both parties, and that stage 3 lets an uninvolved third
+party close the escrow: seller paid, bond returned, no reputation moved, seller's stake withdrawable
+again. Passed on listing #4.
+
+One self-inflicted note: the first version of that script "checked" reputation by comparing a fresh
+read to another fresh read, which passes unconditionally. Replaced with a real before/after capture.
