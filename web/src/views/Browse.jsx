@@ -1,6 +1,6 @@
 import { formatEther } from "viem";
 import PriceTicker from "../components/PriceTicker";
-import Redacted from "../components/Redacted";
+import SealedPreview from "../components/SealedPreview";
 import { short } from "../config";
 
 function Row({ listing, now, unlocked, go }) {
@@ -10,7 +10,13 @@ function Row({ listing, now, unlocked, go }) {
       className={`row ${unlocked ? "unlocked" : ""} ${dead ? "dead" : ""}`}
       onClick={() => go("listing", listing.id.toString())}
     >
-      <Redacted revealed={false} lines={4} width={26} />
+      <SealedPreview
+        contentHash={listing.contentHash}
+        cid={listing.storagePointer}
+        w={190}
+        h={104}
+        label={unlocked ? "UNLOCKED" : "SEALED"}
+      />
       <div>
         <div className="title">
           {listing.game} — {listing.category}

@@ -5,6 +5,7 @@ import { useListing, useListingPurchases } from "../lib/hooks";
 import { useUnlockedContent } from "../lib/unlock";
 import PriceTicker from "../components/PriceTicker";
 import Redacted from "../components/Redacted";
+import SealedPreview from "../components/SealedPreview";
 import Countdown from "../components/Countdown";
 import StateBadge from "../components/StateBadge";
 import TxButton from "../components/TxButton";
@@ -51,7 +52,18 @@ export default function Detail({ id, now, go }) {
             warning: the file fetched from IPFS does not match the hash committed at listing time.
           </div>
         )}
-        <Redacted text={unlocked.text} revealed={unlocked.status === "ready"} lines={6} />
+        {unlocked.status === "ready" ? (
+          <Redacted text={unlocked.text} revealed lines={6} />
+        ) : (
+          <SealedPreview
+            wide
+            contentHash={listing.contentHash}
+            cid={listing.storagePointer}
+            w={680}
+            h={220}
+            label={mine ? "DECRYPTING" : "SEALED"}
+          />
+        )}
         {unlocked.status === "ready" && unlocked.hashOk && (
           <div className="note good" style={{ marginTop: 12 }}>
             file matches the on-chain commitment {listing.contentHash.slice(0, 18)}…

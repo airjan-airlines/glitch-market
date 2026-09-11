@@ -29,14 +29,16 @@ const info = await page.evaluate(() => ({
   prices: Array.from(document.querySelectorAll(".price-cell .amt")).map((e) => e.textContent).slice(0, 8),
   titles: Array.from(document.querySelectorAll(".row .title")).map((e) => e.textContent).slice(0, 8),
   tabs: Array.from(document.querySelectorAll("nav.tabs button")).map((e) => e.textContent),
-  redactionBars: document.querySelectorAll(".redacted .bar").length,
+  sealedBlocks: document.querySelectorAll(".sealed canvas").length,
+  sealedTags: Array.from(document.querySelectorAll(".sealed-tag")).map((e) => e.textContent.trim()).slice(0, 3),
+  sealedFeet: Array.from(document.querySelectorAll(".sealed-foot")).map((e) => e.textContent.trim()).slice(0, 3),
   bodyText: (document.body.innerText || "").slice(0, 260),
 }));
 
 console.log("title        :", info.title);
 console.log("root mounted :", info.rootChildren > 0);
 console.log("listing rows :", info.rows);
-console.log("redaction    :", info.redactionBars, "bars");
+console.log("sealed       :", info.sealedBlocks, "canvases |", info.sealedTags.join(" ") , "|", info.sealedFeet.join(" / "));
 console.log("tabs         :", info.tabs.join(" | "));
 console.log("listings     :", info.titles.join(" / "));
 console.log("prices       :", info.prices.join(" , "));

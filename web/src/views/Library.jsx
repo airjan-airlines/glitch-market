@@ -4,6 +4,7 @@ import { useAccount } from "wagmi";
 import { CHALLENGE_WINDOW, juryEligibleAt } from "@shared/pricing.js";
 import { useUnlockedContent } from "../lib/unlock";
 import Redacted from "../components/Redacted";
+import SealedPreview from "../components/SealedPreview";
 import StateBadge from "../components/StateBadge";
 import Countdown from "../components/Countdown";
 import { short } from "../config";
@@ -50,7 +51,18 @@ function Entry({ row, now, go }) {
         <div style={{ marginTop: 16 }}>
           {unlocked.status === "loading" && <div className="note info"><span className="spin" />{unlocked.stage}…</div>}
           {unlocked.status === "error" && <div className="note err">{unlocked.error}</div>}
-          <Redacted text={unlocked.text} revealed={unlocked.status === "ready"} lines={6} />
+          {unlocked.status === "ready" ? (
+            <Redacted text={unlocked.text} revealed lines={6} />
+          ) : (
+            <SealedPreview
+              wide
+              contentHash={row.listing.contentHash}
+              cid={row.listing.storagePointer}
+              w={680}
+              h={180}
+              label="DECRYPTING"
+            />
+          )}
         </div>
       )}
     </div>
