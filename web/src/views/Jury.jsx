@@ -1,8 +1,8 @@
-import { formatEther } from "viem";
+
 import { useAccount, useReadContract } from "wagmi";
 import { MIN_JURY_VOTES, juryEligibleAt, openJuryAt, timeoutAt } from "@shared/pricing.js";
 import { useListingPurchases, useListing } from "../lib/hooks";
-import { CONTRACT, short } from "../config";
+import { CONTRACT, short, fmtEth } from "../config";
 import { bytes32ToCid } from "@shared/cid.js";
 import { DEFAULT_GATEWAY } from "@shared/storage.js";
 import Countdown from "../components/Countdown";
@@ -48,8 +48,8 @@ function Case({ dispute, listingId, now, refetch }) {
         <span>listing #{listingId.toString()}</span>
         <span>purchase #{dispute.purchaseId.toString()}</span>
         <span>disputed by {short(dispute.buyer)}</span>
-        <span>{formatEther(dispute.pricePaid)} ETH frozen</span>
-        <span>bond {formatEther(dispute.disputeBond)} ETH</span>
+        <span>{fmtEth(dispute.pricePaid)} ETH frozen</span>
+        <span>bond {fmtEth(dispute.disputeBond)} ETH</span>
       </div>
 
       <dl className="kv">

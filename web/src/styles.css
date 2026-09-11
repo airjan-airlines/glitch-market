@@ -128,7 +128,7 @@ main { max-width: 1080px; margin: 0 auto; padding: 28px 20px 90px; }
 
 .row {
   display: grid;
-  grid-template-columns: 210px 1fr 168px;
+  grid-template-columns: 210px 1fr 186px;
   gap: 20px;
   background: var(--slab);
   border: 1px solid var(--line);
@@ -150,7 +150,10 @@ main { max-width: 1080px; margin: 0 auto; padding: 28px 20px 90px; }
 .row .meta { display: flex; gap: 14px; font-family: var(--mono); font-size: 11.5px; color: var(--ash); flex-wrap: wrap; }
 
 .price-cell { text-align: right; }
-.price-cell .amt { font-family: var(--mono); font-size: 19px; font-weight: 700; color: var(--ember); letter-spacing: -0.02em; }
+.price-cell .amt {
+  font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--ember);
+  letter-spacing: -0.03em; white-space: nowrap; font-variant-numeric: tabular-nums;
+}
 .price-cell .amt.settled { color: var(--signal); }
 .price-cell .sub { font-family: var(--mono); font-size: 10.5px; color: var(--ash); margin-top: 3px; }
 .price-cell .sub.falling::before { content: "▼ "; color: var(--burn); }

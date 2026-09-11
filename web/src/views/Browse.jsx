@@ -1,7 +1,7 @@
-import { formatEther } from "viem";
+
 import PriceTicker from "../components/PriceTicker";
 import SealedPreview from "../components/SealedPreview";
-import { short } from "../config";
+import { short, fmtEth } from "../config";
 
 function Row({ listing, now, unlocked, go }) {
   const dead = !listing.active;
@@ -27,7 +27,7 @@ function Row({ listing, now, unlocked, go }) {
           <span>{listing.copiesSold.toString()} sold</span>
           <span>seller {short(listing.seller)}</span>
           <span>rep {listing.reputation.toString()}</span>
-          <span>stake {formatEther(listing.stake)}</span>
+          <span>stake {fmtEth(listing.stake)}</span>
           {unlocked && <span style={{ color: "var(--signal)" }}>unlocked</span>}
           {dead && <span style={{ color: "var(--burn)" }}>delisted</span>}
         </div>

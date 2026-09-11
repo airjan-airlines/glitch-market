@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { formatEther } from "viem";
+
 import { useAccount } from "wagmi";
 import { CHALLENGE_WINDOW, juryEligibleAt } from "@shared/pricing.js";
 import { useUnlockedContent } from "../lib/unlock";
@@ -7,7 +7,7 @@ import UnlockedContent from "../components/UnlockedContent";
 import SealedPreview from "../components/SealedPreview";
 import StateBadge from "../components/StateBadge";
 import Countdown from "../components/Countdown";
-import { short } from "../config";
+import { short, fmtEth } from "../config";
 
 function Entry({ row, now, go }) {
   const [open, setOpen] = useState(false);
@@ -24,7 +24,7 @@ function Entry({ row, now, go }) {
           </div>
           <div className="meta">
             <span>#{row.listing.id.toString()}</span>
-            <span>paid {formatEther(row.pricePaid)} ETH</span>
+            <span>paid {fmtEth(row.pricePaid)} ETH</span>
             <span>seller {short(row.listing.seller)}</span>
             <StateBadge state={row.state} />
           </div>
