@@ -3,6 +3,7 @@ import { parseEther, formatEther, keccak256 } from "viem";
 import { useAccount, useReadContract } from "wagmi";
 import { CONTRACT, getPinataJwt, setPinataJwt, JWT_IS_BUILTIN } from "../config";
 import { encryptBlob, randomKey, toHex } from "@shared/crypto.js";
+import { pack } from "@shared/envelope.js";
 import { pinToIPFS } from "@shared/storage.js";
 import TxButton from "../components/TxButton";
 
@@ -27,7 +28,9 @@ export default function Sell({ go }) {
   });
   const [prep, setPrep] = useState({ status: "idle" });
   const [jwt, setJwt] = useState(getPinataJwt());
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const [file, setFile] = useState(null);
+  const [mode, setMode] = useState("text");
+  const set = (k) => (e) => { setForm((f) => ({ ...f, [k]: e.target.value })); setPrep({ status: "idle" }); };
 
   let initialPrice = 0n, minPrice = 0n, priceOk = false;
   try {
@@ -48,8 +51,12 @@ export default function Sell({ go }) {
     setPrep({ status: "working", stage: "encrypting in your browser" });
     try {
       const key = randomKey();
-      const plaintext = new TextEncoder().encode(form.content);
-      const ciphertext = await encryptBlob(plaintext, key);
+      // Wrap the payload with its name and media type so the buyer gets a playable file back,
+      // not anonymous bytes. Encryption happens here, in the browser, before anything is uploaded.
+      const payload = mode === "file" && file
+        ? { name: file.name, type: file.type || "application/octet-stream", bytes: new Uint8Array(await file.arrayBuffer()) }
+        : { name: "instructions.txt", type: "text/plain", bytes: new TextEncoder().encode(form.content) };
+      const ciphertext = await encryptBlob(pack(payload), key);
       const contentHash = keccak256(ciphertext);
       setPrep({ status: "working", stage: "uploading the encrypted file to IPFS" });
       const cid = await pinToIPFS(ciphertext, `glitch-${Date.now()}.bin`, getPinataJwt());
@@ -90,10 +97,39 @@ export default function Sell({ go }) {
           <textarea value={form.teaser} onChange={set("teaser")} />
         </label>
         <p className="hint">This is the only thing buyers see before paying. Say what it is worth, not how it works.</p>
-        <label>
-          <span>the actual trick — encrypted, never sent in the clear</span>
-          <textarea value={form.content} onChange={set("content")} style={{ minHeight: 150, fontFamily: "var(--mono)", fontSize: 12.5 }} />
-        </label>
+        <span style={{ display: "block", fontFamily: "var(--mono)", fontSize: 11.5, color: "var(--ash)", marginBottom: 6 }}>
+          the actual trick — encrypted in this browser, never sent in the clear
+        </span>
+        <div className="seg">
+          <button type="button" className={mode === "text" ? "on" : ""} onClick={() => setMode("text")}>written instructions</button>
+          <button type="button" className={mode === "file" ? "on" : ""} onClick={() => setMode("file")}>video or file</button>
+        </div>
+
+        {mode === "text" ? (
+          <label>
+            <textarea value={form.content} onChange={set("content")} style={{ minHeight: 150, fontFamily: "var(--mono)", fontSize: 12.5 }} />
+          </label>
+        ) : (
+          <>
+            <label>
+              <input
+                type="file"
+                accept="video/*,image/*,audio/*,text/*,application/pdf"
+                onChange={(e) => { setFile(e.target.files?.[0] ?? null); setPrep({ status: "idle" }); }}
+              />
+            </label>
+            {file ? (
+              <div className="note good">
+                {file.name} · {(file.size / 1024).toFixed(1)} KB · {file.type || "unknown type"}
+              </div>
+            ) : (
+              <p className="hint">
+                A clip of the trick working is the most convincing thing you can sell. Keep it small —
+                it is pinned to IPFS and fetched back through a gateway.
+              </p>
+            )}
+          </>
+        )}
       </div>
 
       <div className="panel">
@@ -134,7 +170,7 @@ export default function Sell({ go }) {
           </>
         )}
         {prep.status === "idle" && (
-          <button className="btn big" onClick={prepare} disabled={!priceOk || !form.content.trim() || !jwt}>
+          <button className="btn big" onClick={prepare} disabled={!priceOk || !jwt || (mode === "file" ? !file : !form.content.trim())}>
             Encrypt and upload
           </button>
         )}

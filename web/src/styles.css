@@ -278,6 +278,34 @@ textarea { resize: vertical; min-height: 66px; font-family: var(--ui); }
 .tier.on.warn b { color: var(--ember); }
 @media (max-width: 760px) { .tiers { grid-template-columns: 1fr; } }
 
+/* ---------------------------------------------------------------- media + segmented control */
+
+.seg { display: flex; gap: 2px; margin-bottom: 12px; }
+.seg button {
+  flex: 1; background: var(--void); border: 1px solid var(--line); color: var(--ash);
+  font-family: var(--mono); font-size: 12px; padding: 8px 10px; border-radius: 5px;
+}
+.seg button.on { background: var(--slab-2); color: var(--signal); border-color: rgba(0, 255, 156, 0.35); }
+
+input[type="file"] { padding: 9px; font-size: 12px; cursor: pointer; }
+input[type="file"]::file-selector-button {
+  background: var(--slab-2); border: 1px solid var(--line); color: var(--bone);
+  font-family: var(--mono); font-size: 11.5px; padding: 5px 10px; border-radius: 4px;
+  margin-right: 10px; cursor: pointer;
+}
+
+.unlocked-media { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: #0d0f13; }
+.unlocked-media video, .unlocked-media img { display: block; width: 100%; max-height: 460px; object-fit: contain; background: #000; }
+.unlocked-media audio { display: block; width: 100%; padding: 12px; }
+.file-drop { padding: 26px; text-align: center; }
+.file-drop b { display: block; font-family: var(--mono); font-size: 13px; color: var(--signal); }
+.file-drop span { font-family: var(--mono); font-size: 11px; color: var(--ash); }
+.media-foot {
+  display: flex; justify-content: space-between; gap: 10px; align-items: center;
+  padding: 7px 10px; border-top: 1px solid var(--line); background: var(--void);
+  font-family: var(--mono); font-size: 11px; color: var(--ash);
+}
+
 /* ---------------------------------------------------------------- feedback */
 
 .note { padding: 11px 13px; border-radius: 5px; font-size: 13px; margin-bottom: 14px; font-family: var(--mono); }

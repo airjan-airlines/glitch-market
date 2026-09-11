@@ -3,7 +3,7 @@ import { formatEther } from "viem";
 import { useAccount } from "wagmi";
 import { CHALLENGE_WINDOW, juryEligibleAt } from "@shared/pricing.js";
 import { useUnlockedContent } from "../lib/unlock";
-import Redacted from "../components/Redacted";
+import UnlockedContent from "../components/UnlockedContent";
 import SealedPreview from "../components/SealedPreview";
 import StateBadge from "../components/StateBadge";
 import Countdown from "../components/Countdown";
@@ -52,7 +52,7 @@ function Entry({ row, now, go }) {
           {unlocked.status === "loading" && <div className="note info"><span className="spin" />{unlocked.stage}…</div>}
           {unlocked.status === "error" && <div className="note err">{unlocked.error}</div>}
           {unlocked.status === "ready" ? (
-            <Redacted text={unlocked.text} revealed lines={6} />
+            <UnlockedContent unlocked={unlocked} />
           ) : (
             <SealedPreview
               wide

@@ -1,11 +1,12 @@
-import { formatEther, keccak256, toBytes } from "viem";
+import { formatEther } from "viem";
 import { useAccount } from "wagmi";
 import { priceToSend, currentPrice, disputeBondFor, CHALLENGE_WINDOW, juryEligibleAt } from "@shared/pricing.js";
 import { useListing, useListingPurchases } from "../lib/hooks";
 import { useUnlockedContent } from "../lib/unlock";
 import PriceTicker from "../components/PriceTicker";
-import Redacted from "../components/Redacted";
+import UnlockedContent from "../components/UnlockedContent";
 import SealedPreview from "../components/SealedPreview";
+import DisputeForm from "../components/DisputeForm";
 import Countdown from "../components/Countdown";
 import StateBadge from "../components/StateBadge";
 import TxButton from "../components/TxButton";
@@ -53,7 +54,7 @@ export default function Detail({ id, now, go }) {
           </div>
         )}
         {unlocked.status === "ready" ? (
-          <Redacted text={unlocked.text} revealed lines={6} />
+          <UnlockedContent unlocked={unlocked} />
         ) : (
           <SealedPreview
             wide
@@ -129,24 +130,7 @@ export default function Detail({ id, now, go }) {
           </dl>
 
           {Number(mine.state) === 1 && inWindow && (
-            <div style={{ marginTop: 16 }}>
-              <p style={{ fontSize: 13.5, color: "var(--ash-2)" }}>
-                If the glitch does not work, dispute it. Disputing costs a bond of{" "}
-                <b className="mono">{formatEther(disputeBondFor(mine.pricePaid))} ETH</b> and freezes
-                the seller's payment — it does not refund you on the spot. You lose the bond if the
-                jury sides with the seller. Include the nonce above in your footage.
-              </p>
-              <TxButton
-                className="btn danger"
-                fn="dispute"
-                args={[mine.purchaseId, keccak256(toBytes(`attempt-evidence||nonce=${mine.nonce}`))]}
-                value={disputeBondFor(mine.pricePaid)}
-                onDone={after}
-                confirm={`This posts a ${formatEther(disputeBondFor(mine.pricePaid))} ETH bond and freezes the seller's payment. You forfeit the bond if the jury disagrees with you.`}
-              >
-                Dispute this sale
-              </TxButton>
-            </div>
+            <DisputeForm purchase={mine} onDone={after} />
           )}
 
           {Number(mine.state) === 3 && (

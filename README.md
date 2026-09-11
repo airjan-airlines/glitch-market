@@ -38,8 +38,10 @@ firm to resolve against, which most black-box-information markets simply do not 
 
 ## How it works
 
-**Listing.** The seller's browser encrypts the content (AES-256-GCM), pins the ciphertext to IPFS,
-and puts only the hash and the CID on-chain. The hash is a commitment: what gets revealed after
+**Listing.** The seller uploads a clip of the trick working, or types the instructions. Either way
+the browser wraps it with its filename and media type, encrypts it (AES-256-GCM), pins the
+ciphertext to IPFS, and puts only the hash and the CID on-chain. A buyer who unlocks a video gets a
+player; one who unlocks text gets the redaction burning away. The hash is a commitment: what gets revealed after
 payment must be the file that was committed at listing time, so a seller cannot take the money and
 swap in something else. The seller also posts a stake — 5× the asking price while unproven, easing
 toward 2× as they accumulate clean sales.
@@ -155,9 +157,12 @@ escrow, commitments, decay, disputes, juries — depends on this shortcut.
 
 ## One important limitation: the evidence is weak
 
-A disputing buyer submits a hash of their evidence, and the contract binds a nonce it emitted at
-purchase time, which the buyer is expected to capture on screen. That stops one attack: old or
-unrelated footage cannot be recycled, because it will not contain the right nonce.
+A disputing buyer uploads their attempt, which is pinned to IPFS, and the CID's own digest goes
+on-chain as `evidenceHash`. That one `bytes32` is both a commitment to the file and a pointer to it
+— a CIDv0 is `base58(0x12 0x20 || sha2-256)`, so the 32-byte digest is exactly what fits, and jurors
+reconstruct the CID to fetch and watch the bytes that were committed. The contract also emits a
+nonce at purchase time which the buyer must capture on screen. That stops one attack: old or
+unrelated footage cannot be recycled, because it will not carry the right nonce.
 
 **It does nothing about editing.** Hashing a video proves only that it was not swapped after
 submission — not that it is a genuine, unedited recording of a real attempt. A buyer who is willing

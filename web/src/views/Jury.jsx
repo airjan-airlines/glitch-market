@@ -3,6 +3,8 @@ import { useAccount, useReadContract } from "wagmi";
 import { MIN_JURY_VOTES, juryEligibleAt, openJuryAt, timeoutAt } from "@shared/pricing.js";
 import { useListingPurchases, useListing } from "../lib/hooks";
 import { CONTRACT, short } from "../config";
+import { bytes32ToCid } from "@shared/cid.js";
+import { DEFAULT_GATEWAY } from "@shared/storage.js";
 import Countdown from "../components/Countdown";
 import TxButton from "../components/TxButton";
 
@@ -27,6 +29,8 @@ function Case({ dispute, listingId, now, refetch }) {
     ...CONTRACT, functionName: "hasPurchased", args: [listingId, address], query: { enabled: !!address },
   });
 
+  const evidenceCid = bytes32ToCid(dispute.evidenceHash);
+
   if (!listing) return null;
 
   const t = Number(tier ?? 0);
@@ -49,7 +53,19 @@ function Case({ dispute, listingId, now, refetch }) {
       </div>
 
       <dl className="kv">
-        <dt>evidence hash</dt><dd>{dispute.evidenceHash}</dd>
+        <dt>evidence</dt>
+        <dd>
+          {evidenceCid ? (
+            <>
+              <a href={DEFAULT_GATEWAY + evidenceCid} target="_blank" rel="noreferrer">{evidenceCid}</a>
+              <div style={{ color: "var(--ash)", marginTop: 3 }}>
+                the buyer's own attempt — watch it, then go try the trick yourself
+              </div>
+            </>
+          ) : (
+            <span style={{ color: "var(--ash)" }}>no retrievable file ({dispute.evidenceHash.slice(0, 18)}…)</span>
+          )}
+        </dd>
         <dt>bound nonce</dt><dd>{dispute.nonce}</dd>
       </dl>
 

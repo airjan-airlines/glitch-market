@@ -165,3 +165,38 @@ again. Passed on listing #4.
 
 One self-inflicted note: the first version of that script "checked" reputation by comparing a fresh
 read to another fresh read, which passes unconditionally. Replaced with a real before/after capture.
+
+---
+
+## Media and evidence were faked in the first build — now they are real
+
+Two things the PRD and frontend spec asked for were not actually implemented, and the user caught
+both.
+
+**Sellers could not upload anything.** PRD §3.1 describes the good as "video/instructions" and
+frontend spec §3.4 asks for a file upload encrypted client-side. The sell form was a textarea only,
+so every listing was text pretending to be a video market. It now takes `video/*`, `image/*`,
+`audio/*`, text and PDF, encrypts the real bytes in the browser, and pins those. Buyers get a
+`<video>` player, an image, or the text burn-in depending on what they bought. Content is wrapped in
+a small envelope (`shared/envelope.js`) carrying filename and media type, so an unlocked file is
+playable rather than anonymous bytes; payloads without the envelope magic still decode as text, so
+listings made before this change keep working.
+
+**Dispute evidence was hashed from a string, not a file.** The dispute button committed
+`keccak256("attempt-evidence||nonce=…")` — no file was ever uploaded or hashed, which made the whole
+nonce-binding story decorative. Worse, even a real hash would have been useless to jurors, since
+`dispute()` takes only a `bytes32` and there was nowhere to put a pointer.
+
+Fixed without a redeploy by noticing that a CIDv0 is `base58(0x12 0x20 || sha2-256 digest)` — the
+digest is exactly 32 bytes. The buyer's file is pinned, and the CID's digest is stored as
+`evidenceHash`, so that single field is simultaneously a commitment and a retrievable pointer. The
+jury view reconstructs the CID and links to the file. Verified against a real pin: hash is 32 bytes,
+the CID round-trips exactly, and the fetched bytes match what was uploaded.
+
+**Seeded proof.** `scripts/seed-media.mjs` lists a real binary payload (a PNG route diagram
+synthesised at runtime — no ffmpeg dependency and no copyrighted game footage). Verified end to end
+on-chain: 3,969 bytes of ciphertext on IPFS, keccak matches the on-chain commitment, decrypts to a
+valid PNG with its signature and filename intact.
+
+**Still not done:** jurors cannot attach evidence to their own vote. PRD §3.5 says they "ideally"
+should; `vote(purchaseId, forBuyer)` takes a bool only. Only the disputing buyer submits evidence.
